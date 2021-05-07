@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Windows.Forms;
 
@@ -16,7 +17,7 @@ namespace GameboyZelda
         private SpriteBatch _spriteBatch;
         private RetroScreen gameboy;
         private Sprite player;
-        private Background background;
+        private MapScreen background;
         private Texture2D titleScreen;
         private Texture2D logo;
         private GameState gs;
@@ -41,7 +42,7 @@ namespace GameboyZelda
             int height = MaxHeight();
             _graphics.PreferredBackBufferHeight = height;
 
-            _graphics.PreferredBackBufferWidth = (height / 144) * 160;
+            _graphics.PreferredBackBufferWidth = (height / screenHeight) * screenWidth;
             _graphics.ApplyChanges();
         }
 
@@ -50,14 +51,17 @@ namespace GameboyZelda
             int height = MaxHeight(screen);
             _graphics.PreferredBackBufferHeight = height;
 
-            _graphics.PreferredBackBufferWidth = (height / 144) * 160;
+            _graphics.PreferredBackBufferWidth = (height / screenHeight) * screenWidth;
             _graphics.ApplyChanges();
         }
 
         private void CenterScreen(Screen screen)
         {
-            Window.Position = new Point((screen.Bounds.Width / 2) - (Window.ClientBounds.Width / 2), (screen.Bounds.Height / 2) - (Window.ClientBounds.Height / 2));
+            //Window.Position = new Point((screen.Bounds.Width / 2) - (Window.ClientBounds.Width / 2), (screen.Bounds.Height / 2) - (Window.ClientBounds.Height / 2));
+            Window.Position += new Point((screen.Bounds.Width / 2) - (Window.ClientBounds.Width / 2), (screen.Bounds.Height / 2) - (Window.ClientBounds.Height / 2));
         }
+
+        private bool previouslyMaximized = false;
 
         private void SwitchFullscreen()
         {
@@ -66,10 +70,12 @@ namespace GameboyZelda
             _graphics.HardwareModeSwitch = false;
             Window.BeginScreenDeviceChange(!_graphics.IsFullScreen);
             bool wasFullscreen = _graphics.IsFullScreen;
+
             if (!_graphics.IsFullScreen)
             {
                 _graphics.PreferredBackBufferWidth = screen.Bounds.Width;
                 _graphics.PreferredBackBufferHeight = screen.Bounds.Height;
+                previouslyMaximized = f.WindowState == FormWindowState.Maximized;
             }
             else
             {
@@ -78,7 +84,7 @@ namespace GameboyZelda
             _graphics.ToggleFullScreen();
             _graphics.ApplyChanges();
             _graphics.HardwareModeSwitch = true;
-            if (wasFullscreen)
+            if (wasFullscreen && previouslyMaximized)
             {
                 CenterScreen(screen);
             }
@@ -87,8 +93,8 @@ namespace GameboyZelda
         protected override void Initialize()
         {
             // TODO: Add your initialization logic here
-            //renderTarget = new RenderTarget2D(GraphicsDevice, 160, 144);
-            gameboy = new RetroScreen(new RenderTarget2D(GraphicsDevice, 160, 144), ScreenSize());
+            //renderTarget = new RenderTarget2D(GraphicsDevice, screenWidth, screenHeight);
+            gameboy = new RetroScreen(new RenderTarget2D(GraphicsDevice, screenWidth, screenHeight), ScreenSize());
             Window.AllowUserResizing = true;
             Window.ClientSizeChanged += ScreenChange;
             //screenSize = ScreenSize();
@@ -100,9 +106,9 @@ namespace GameboyZelda
             _spriteBatch = new SpriteBatch(GraphicsDevice);
             Texture2D texture = Content.Load<Texture2D>("linktransdown0");
             titleScreen = Content.Load<Texture2D>("TheTitleScreen");
-            player = new Sprite(texture, new Vector2(160 / 2, 144 / 2));
+            player = new Sprite(texture, new Vector2(screenWidth / 2, screenHeight / 2));
             logo = Content.Load<Texture2D>("Logo");
-            background = new Background(logo, new Rectangle(0, 0, 160, 144));
+            background = new MapScreen(logo, new Rectangle(0, 0, screenWidth, screenHeight));
             // TODO: use this.Content to load your game content here
         }
 
@@ -165,25 +171,25 @@ namespace GameboyZelda
 
         private void ScreenChange(object sender, EventArgs e)
         {
-            //int height = GetNearestMultiple(GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height, 144);
+            //int height = GetNearestMultiple(GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height, screenHeight);
             //if (height > GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height)
             //{
-            //    height -= 144;
+            //    height -= screenHeight;
             //}
-            //float ratio = height / 144;
-            //int width = (int)Math.Round(ratio * 160);
+            //float ratio = height / screenHeight;
+            //int width = (int)Math.Round(ratio * screenWidth);
             //_graphics.PreferredBackBufferWidth = width;
             //_graphics.PreferredBackBufferHeight = height;
             //_graphics.ApplyChanges();
-            if (Window.ClientBounds.Width < 160 || Window.ClientBounds.Height < 144)
+            if (Window.ClientBounds.Width < screenWidth || Window.ClientBounds.Height < screenHeight)
             {
-                if (Window.ClientBounds.Width < 160)
+                if (Window.ClientBounds.Width < screenWidth)
                 {
-                    _graphics.PreferredBackBufferWidth = 160;
+                    _graphics.PreferredBackBufferWidth = screenWidth;
                 }
-                if (Window.ClientBounds.Height < 144)
+                if (Window.ClientBounds.Height < screenHeight)
                 {
-                    _graphics.PreferredBackBufferHeight = 144;
+                    _graphics.PreferredBackBufferHeight = screenHeight;
                 }
                 _graphics.ApplyChanges();
             }
@@ -193,52 +199,52 @@ namespace GameboyZelda
         private Rectangle ScreenSize()
         {
             Rectangle rectangle;
-            int height = GetNearestMultiple(Window.ClientBounds.Height, 144);
-            if (height > Window.ClientBounds.Height && height > 144)
+            int height = GetNearestMultiple(Window.ClientBounds.Height, screenHeight);
+            if (height > Window.ClientBounds.Height && height > screenHeight)
             {
-                height -= 144;
+                height -= screenHeight;
             }
-            else if (height < 144)
+            else if (height < screenHeight)
             {
-                height = 144;
+                height = screenHeight;
             }
-            int ratio = height / 144;
-            int width = (ratio * 160);
+            int ratio = height / screenHeight;
+            int width = (ratio * screenWidth);
             if (width > Window.ClientBounds.Width)
             {
-                width = GetNearestMultiple(Window.ClientBounds.Width, 160);
-                if (width > Window.ClientBounds.Width && width > 160)
+                width = GetNearestMultiple(Window.ClientBounds.Width, screenWidth);
+                if (width > Window.ClientBounds.Width && width > screenWidth)
                 {
-                    width -= 160;
+                    width -= screenWidth;
                 }
-                else if (width < 160)
+                else if (width < screenWidth)
                 {
-                    width = 160;
+                    width = screenWidth;
                 }
-                ratio = width / 160;
-                height = ratio * 144;
+                ratio = width / screenWidth;
+                height = ratio * screenHeight;
             }
             return new Rectangle(Window.ClientBounds.Width / 2 - width / 2, Window.ClientBounds.Height / 2 - height / 2, width, height);
         }
 
         private int MaxHeight()
         {
-            int height = GetNearestMultiple(GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height, 144);
+            int height = GetNearestMultiple(GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height, screenHeight);
             if (height > GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height)
             {
-                height -= 144;
+                height -= screenHeight;
             }
-            return height - 144;
+            return height - screenHeight;
         }
 
         private int MaxHeight(Screen screen)
         {
-            int height = GetNearestMultiple(screen.Bounds.Height, 144);
+            int height = GetNearestMultiple(screen.Bounds.Height, screenHeight);
             if (height > screen.Bounds.Height)
             {
-                height -= 144;
+                height -= screenHeight;
             }
-            return height - 144;
+            return height - screenHeight;
         }
 
         private int GetNearestMultiple(int value, int factor)
@@ -272,12 +278,13 @@ namespace GameboyZelda
         }
     }
 
-    internal class Background
+    internal class MapScreen
     {
         public Texture2D texture { private set; get; }
         public Rectangle rectangle { private set; get; }
+        public List<Sprite> spritesInScreen = new List<Sprite>();
 
-        public Background(Texture2D _texture, Rectangle _rectangle)
+        public MapScreen(Texture2D _texture, Rectangle _rectangle)
         {
             texture = _texture;
             rectangle = _rectangle;
@@ -291,6 +298,10 @@ namespace GameboyZelda
         public void Draw(SpriteBatch _spriteBatch)
         {
             _spriteBatch.Draw(texture, rectangle, Color.White);
+            for (int i = 0; i < spritesInScreen.Count; i++)
+            {
+                spritesInScreen[i].Draw(_spriteBatch);
+            }
         }
     }
 }
